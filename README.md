@@ -4,6 +4,9 @@ Simple Automator for web security tests.
 Really basic web scanner that just automates some common tools that are usually deployed at the start of web application test.
 Ideally with the aim of saving some time to focus on the more manual testing :) 
 
+# Warning
+Running this many tools concurrently against a host might be a bit of a DOS on both the target and your cpu...
+
 # Usage
 ```sh
 
