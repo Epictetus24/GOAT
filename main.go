@@ -2,28 +2,16 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"net"
 	"os"
-	"os/exec"
 	"strings"
 	"sync"
 
+	"github.com/Epictetus24/gowebscan/scan"
 	"github.com/fatih/color"
 )
 
-//Host stores each application hostname and IP address
-type Host struct {
-	Hostname string
-	IP       string
-}
-
-//Targets stores all the hosts in a slice
-type Targets struct {
-	Hostlist []Host
-}
-
-func lookup(host Host) (hostip Host) {
+func lookup(host scan.Host) (hostip scan.Host) {
 	addr, err := net.LookupIP(host.Hostname)
 	if err != nil {
 		os.Exit(1)
@@ -47,11 +35,11 @@ func lookup(host Host) (hostip Host) {
 
 }
 
-func populate(file string) Targets {
+func populate(file string) scan.Targets {
 	// Part 1: open the file and scan it.
 	f, _ := os.Open(file)
 	scanner := bufio.NewScanner(f)
-	var targets Targets
+	var targets scan.Targets
 
 	// Part 2: call Scan in a for-loop.
 	for scanner.Scan() {
@@ -61,7 +49,7 @@ func populate(file string) Targets {
 		parts := strings.Split(line, "\n")
 
 		for i := range parts {
-			var host Host
+			var host scan.Host
 			deets := strings.Split(parts[i], ":")
 			if len(deets) < 2 {
 				color.Green("Hostname %s added to list with whatever IP resolves\n", deets[0])
@@ -80,123 +68,6 @@ func populate(file string) Targets {
 	return targets
 }
 
-//kicks off nikto
-func nikto(host Host, wg *sync.WaitGroup) {
-
-	defer wg.Done()
-	filename := host.Hostname + "-nikto_output.txt"
-
-	args := []string{"nikto", "-host", "hostname", "-output", "filename", "-port", "443"}
-	args[2] = host.Hostname
-	args[4] = filename
-
-	nikto := exec.Command("/bin/bash", args[0:]...)
-	if err := nikto.Start(); err != nil {
-		color.Red("Failed to start nikto: %v", err)
-		return
-	}
-
-	color.Cyan("Nikto running against host %s on port 443\n", host.Hostname)
-
-	if err := nikto.Wait(); err != nil {
-		color.Red("nikto returned error: %v", err)
-	}
-
-	color.Green("Nikto finished, file for %s saved as %s\n", host.Hostname, filename)
-
-}
-
-func testssl(host Host, wg *sync.WaitGroup) {
-
-	defer wg.Done()
-
-	args := []string{"/opt/testssl.sh/testssl.sh", "--html", "--log", "hostname"}
-	args[3] = host.Hostname
-
-	testssl := exec.Command("/bin/bash", args[0:]...)
-	if err := testssl.Start(); err != nil {
-		color.Red("Failed to start testssl: %v", err)
-		return
-	}
-
-	color.Blue("testssl running against host %s\n", host.Hostname)
-
-	if err := testssl.Wait(); err != nil {
-		color.Red("testssl returned error: %v", err)
-	}
-
-	color.Green("testssl finished, file for %s saved.\n", host.Hostname)
-}
-
-func gobust(host Host, wg *sync.WaitGroup) {
-
-	defer wg.Done()
-
-	args := []string{"dir", "-u", "hostname", "-w", "/opt/SecLists/Discovery/Web-Content/raft-small-words-lowercase.txt", "-o", "hostname-gobuster"}
-	args[2] = host.Hostname
-	filename := host.Hostname + "-gobust.txt"
-	args[6] = filename
-	fmt.Println(args)
-
-	gobust := exec.Command("/usr/bin/gobuster", args[0:]...)
-	if err := gobust.Start(); err != nil {
-		color.Red("Failed to start gobuster: %v", err)
-		return
-	}
-
-	color.Blue("gobust running against host %s\n", host.Hostname)
-
-	if err := gobust.Wait(); err != nil {
-		color.Red("gobust returned error: %v", err)
-	}
-
-	color.Green("gobust finished, file for %s saved as %s.\n", host.Hostname, args[7])
-}
-
-func whatweb(host Host) {
-
-	args := []string{"-v", "-a", "4", "host", "--log-verbose="}
-	args[3] = host.Hostname
-	filename := "--log-verbose=" + host.Hostname + "-gobust.txt"
-	args[4] = filename
-
-	gobust := exec.Command("/usr/bin/whatweb", args[0:]...)
-	if err := gobust.Start(); err != nil {
-		color.Red("Failed to start whatweb: %v", err)
-		return
-	}
-
-	color.Blue("whatweb running against host %s\n", host.Hostname)
-
-	if err := gobust.Wait(); err != nil {
-		color.Red("whatweb returned error: %v", err)
-	}
-
-	color.Green("gobust finished, file for %s saved as %s.\n", host.Hostname, args[7])
-}
-
-func nmap(host Host) {
-
-	args := []string{"-vv", "-n", "-sV", "-Pn", "-O", "-oA", "full_tcp", "-p0-", "IP_ADDRESS"}
-	args[8] = host.IP
-	filename := "fulltcp_nmap_" + host.Hostname
-	args[6] = filename
-
-	gobust := exec.Command("/usr/bin/nmap", args[0:]...)
-	if err := gobust.Start(); err != nil {
-		color.Red("Failed to start nmap: %v", err)
-		return
-	}
-
-	color.Blue("nmap full tcp running against host %s\n", host.Hostname)
-
-	if err := gobust.Wait(); err != nil {
-		color.Red("nmap returned error: %v", err)
-	}
-
-	color.Green("nmap finished, file for %s saved as %s.\n", host.Hostname, args[7])
-}
-
 func main() {
 
 	file := os.Args[1]
@@ -210,10 +81,10 @@ func main() {
 	for i, s := range hl {
 
 		color.Yellow("Host tests for %s commencing\n", s.Hostname)
-		whatweb(hl[i])
+		scan.Whatweb(hl[i])
 		wg.Add(2)
-		go nikto(hl[i], &wg)
-		go testssl(hl[i], &wg)
+		go scan.Nikto(hl[i], &wg)
+		go scan.Testssl(hl[i], &wg)
 
 	}
 
