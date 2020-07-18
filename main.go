@@ -81,10 +81,12 @@ func main() {
 	for i, s := range hl {
 
 		color.Yellow("Host tests for %s commencing\n", s.Hostname)
-		scan.Whatweb(hl[i])
-		wg.Add(2)
+		wg.Add(5)
+		go scan.Whatweb(hl[i], &wg)
 		go scan.Nikto(hl[i], &wg)
 		go scan.Testssl(hl[i], &wg)
+		go scan.Gobust(hl[i], &wg)
+		go scan.Nmap(hl[i], &wg)
 
 	}
 
