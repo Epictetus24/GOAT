@@ -145,7 +145,7 @@ func Whatweb(host Host) {
 
 	args := []string{"-v", "-a", "4", "host", "--log-verbose="}
 	args[3] = host.Hostname
-	filename := "--log-verbose=" + host.Hostname + "-gobust.txt"
+	filename := "--log-verbose=" + host.Hostname + "-whatweb.txt"
 	args[4] = filename
 
 	gobust := exec.Command("/usr/bin/whatweb", args[0:]...)
@@ -160,7 +160,7 @@ func Whatweb(host Host) {
 		color.Red("whatweb returned error: %v", err)
 	}
 
-	color.Green("gobust finished, file for %s saved as %s.\n", host.Hostname, args[7])
+	color.Green("whatweb finished, file for %s saved as %s.\n", host.Hostname, args[4])
 }
 
 //Nmap does a nmap version scan of the host through all tcp ports and outputs all formats
