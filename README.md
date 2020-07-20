@@ -18,7 +18,7 @@ It also now checks for HTTP methods by itself, and will supply a map with the re
 
 
 # Warning
-It now only works concurrently for multiple hosts/domain names so it's less Denail of Service triggering, also it won't work if there's an empty newline in the targets file.
+It now only works concurrently for multiple hosts/domain names so it's less Denial of Service triggering, also it won't work if there's an empty newline in the targets file.
 
 # Usage
 ```sh
