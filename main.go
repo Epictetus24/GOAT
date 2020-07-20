@@ -68,6 +68,21 @@ func populate(file string) scan.Targets {
 	return targets
 }
 
+func intenseChecks(host scan.Host, wg *sync.WaitGroup) {
+	defer wg.Done()
+	scan.Whatweb(host)
+	scan.Nikto(host)
+	scan.Testssl(host)
+	scan.Gobust(host)
+	scan.Nmap(host)
+
+}
+
+func simpleChecks(host scan.Host, wg *sync.WaitGroup) {
+	defer wg.Done()
+	scan.Methods(host)
+}
+
 func main() {
 
 	file := os.Args[1]
@@ -81,12 +96,10 @@ func main() {
 	for i, s := range hl {
 
 		color.Yellow("Host tests for %s commencing\n", s.Hostname)
-		wg.Add(5)
-		go scan.Whatweb(hl[i], &wg)
-		go scan.Nikto(hl[i], &wg)
-		go scan.Testssl(hl[i], &wg)
-		go scan.Gobust(hl[i], &wg)
-		go scan.Nmap(hl[i], &wg)
+		wg.Add(1)
+		go intenseChecks(hl[i], &wg)
+		wg.Add(1)
+		go simpleChecks(hl[i], &wg)
 
 	}
 
