@@ -5,7 +5,7 @@ Really basic web scanner that just automates some common tools that are usually 
 Ideally with the aim of saving some time to focus on the more manual testing :) 
 
 # Warning
-Running this many tools concurrently against a host might be a bit of a DOS on both the target and your cpu...
+It now only works concurrently for multiple hosts/domain names so it's less Denail of Service triggering, also it won't work if there's an empty newline in the targets file.
 
 # Usage
 ```sh
