@@ -1,8 +1,11 @@
 package scan
 
 import (
+	"crypto/tls"
+	"fmt"
+	"log"
+	"net/http"
 	"os/exec"
-	"sync"
 
 	"github.com/fatih/color"
 )
@@ -18,9 +21,58 @@ type Targets struct {
 	Hostlist []Host
 }
 
-func Nikto(host Host, wg *sync.WaitGroup) {
+func Request(method string, host Host) bool {
 
-	defer wg.Done()
+	url := "https://"
+	url = url + host.Hostname
+
+	request, err := http.NewRequest(method, url, nil)
+	if err != nil {
+		log.Println(err)
+	}
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(request)
+	if err != nil {
+		client := &http.Client{Transport: tr}
+		resp, err = client.Do(request)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+
+	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
+		fmt.Printf("HTTP Status for %s with method %s is in the 2xx range: Code: %d\n", host, method, resp.StatusCode)
+		return true
+	}
+
+	return false
+
+}
+
+func Methods(host Host) {
+
+	m := make(map[string]bool)
+
+	methods := []string{"GET", "POST", "PUT", "TRACE", "CONNECT", "DELETE", "OPTIONS", "HEAD"}
+
+	for i := range methods {
+
+		m[methods[i]] = Request(methods[i], host)
+
+	}
+	fmt.Printf("\n %s Method Results:\n", host)
+	fmt.Println(m)
+	color.Green("Method checks for %s, finished.\n\n", host)
+
+}
+
+func Nikto(host Host) {
+
 	filename := host.Hostname + "-nikto_output.txt"
 
 	args := []string{"nikto", "-host", "hostname", "-output", "filename", "-port", "443"}
@@ -43,9 +95,7 @@ func Nikto(host Host, wg *sync.WaitGroup) {
 
 }
 
-func Testssl(host Host, wg *sync.WaitGroup) {
-
-	defer wg.Done()
+func Testssl(host Host) {
 
 	args := []string{"/opt/testssl.sh/testssl.sh", "--html", "--log", "hostname"}
 	args[3] = host.Hostname
@@ -65,9 +115,7 @@ func Testssl(host Host, wg *sync.WaitGroup) {
 	color.Green("testssl finished, file for %s saved.\n", host.Hostname)
 }
 
-func Gobust(host Host, wg *sync.WaitGroup) {
-
-	defer wg.Done()
+func Gobust(host Host) {
 
 	args := []string{"dir", "-u", "hostname", "-w", "/opt/SecLists/Discovery/Web-Content/raft-small-words-lowercase.txt", "-o", "hostname-gobuster", "-t4"}
 	args[2] = host.Hostname
@@ -89,9 +137,7 @@ func Gobust(host Host, wg *sync.WaitGroup) {
 	color.Green("gobust finished, file for %s saved as %s.\n", host.Hostname, args[6])
 }
 
-func Whatweb(host Host, wg *sync.WaitGroup) {
-
-	defer wg.Done()
+func Whatweb(host Host) {
 
 	args := []string{"-v", "-a", "4", "host", "--log-verbose="}
 	args[3] = host.Hostname
@@ -113,8 +159,7 @@ func Whatweb(host Host, wg *sync.WaitGroup) {
 	color.Green("gobust finished, file for %s saved as %s.\n", host.Hostname, args[7])
 }
 
-func Nmap(host Host, wg *sync.WaitGroup) {
-	defer wg.Done()
+func Nmap(host Host) {
 
 	args := []string{"-sV", "-O", "-Pn", "host.co.uk", "-p0-", "-oA", "full_tcp", "-T3", "-vv"}
 	args[3] = host.Hostname
