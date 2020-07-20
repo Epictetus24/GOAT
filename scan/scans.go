@@ -21,7 +21,8 @@ type Targets struct {
 	Hostlist []Host
 }
 
-func Request(method string, host Host) bool {
+//CheckMethods - Requests with supplied method and returns the status code.
+func CheckMethods(method string, host Host) int {
 
 	url := "https://"
 	url = url + host.Hostname
@@ -47,22 +48,21 @@ func Request(method string, host Host) bool {
 
 	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
 		fmt.Printf("HTTP Status for %s with method %s is in the 2xx range: Code: %d\n", host, method, resp.StatusCode)
-		return true
 	}
 
-	return false
-
+	return resp.StatusCode
 }
 
+//Methods iterates through potential methods and gets the status code for each, before printing to console.
 func Methods(host Host) {
 
-	m := make(map[string]bool)
+	m := make(map[string]int)
 
 	methods := []string{"GET", "POST", "PUT", "TRACE", "CONNECT", "DELETE", "OPTIONS", "HEAD"}
 
 	for i := range methods {
 
-		m[methods[i]] = Request(methods[i], host)
+		m[methods[i]] = CheckMethods(methods[i], host)
 
 	}
 	fmt.Printf("\n %s Method Results:\n", host)
@@ -71,6 +71,7 @@ func Methods(host Host) {
 
 }
 
+//Nikto runs nikto
 func Nikto(host Host) {
 
 	filename := host.Hostname + "-nikto_output.txt"
@@ -95,6 +96,7 @@ func Nikto(host Host) {
 
 }
 
+//Testssl runs testssl
 func Testssl(host Host) {
 
 	args := []string{"/opt/testssl.sh/testssl.sh", "--html", "--log", "hostname"}
@@ -115,6 +117,7 @@ func Testssl(host Host) {
 	color.Green("testssl finished, file for %s saved.\n", host.Hostname)
 }
 
+//Gobust runs gobuster with raft-small-words
 func Gobust(host Host) {
 
 	args := []string{"dir", "-u", "hostname", "-w", "/opt/SecLists/Discovery/Web-Content/raft-small-words-lowercase.txt", "-o", "hostname-gobuster", "-t4"}
@@ -137,6 +140,7 @@ func Gobust(host Host) {
 	color.Green("gobust finished, file for %s saved as %s.\n", host.Hostname, args[6])
 }
 
+//Whatweb runs whatweb in an aggressive and verbose manner
 func Whatweb(host Host) {
 
 	args := []string{"-v", "-a", "4", "host", "--log-verbose="}
@@ -159,6 +163,7 @@ func Whatweb(host Host) {
 	color.Green("gobust finished, file for %s saved as %s.\n", host.Hostname, args[7])
 }
 
+//Nmap does a nmap version scan of the host through all tcp ports and outputs all formats
 func Nmap(host Host) {
 
 	args := []string{"-sV", "-O", "-Pn", "host.co.uk", "-p0-", "-oA", "full_tcp", "-T3", "-vv"}
