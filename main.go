@@ -55,11 +55,11 @@ func populate(file string) scan.Targets {
 				color.Green("Hostname %s added to list with whatever IP resolves\n", deets[0])
 				host.Hostname = deets[0]
 			} else {
-				color.Green("Hostname %s added to list with ip %s\n", deets[0], deets[1])
+				color.Green("Hostname %s added to list with port %s\n", deets[0], deets[1])
 				host.Hostname = deets[0]
 				host.IP = deets[1]
 			}
-			host = lookup(host)
+			//host = lookup(host)
 			targets.Hostlist = append(targets.Hostlist, host)
 
 		}
@@ -70,9 +70,9 @@ func populate(file string) scan.Targets {
 
 func intenseChecks(host scan.Host, wg *sync.WaitGroup) {
 	defer wg.Done()
+	scan.Testssl(host)
 	scan.Whatweb(host)
 	scan.Nikto(host)
-	scan.Testssl(host)
 	scan.Gobust(host)
 	scan.Nmap(host)
 
@@ -80,7 +80,9 @@ func intenseChecks(host scan.Host, wg *sync.WaitGroup) {
 
 func simpleChecks(host scan.Host, wg *sync.WaitGroup) {
 	defer wg.Done()
+	scan.CheckHeaders(host)
 	scan.Methods(host)
+
 }
 
 func main() {
@@ -96,8 +98,8 @@ func main() {
 	for i, s := range hl {
 
 		color.Yellow("Host tests for %s commencing\n", s.Hostname)
-		wg.Add(1)
-		go intenseChecks(hl[i], &wg)
+		//wg.Add(1)
+		//go intenseChecks(hl[i], &wg)
 		wg.Add(1)
 		go simpleChecks(hl[i], &wg)
 
