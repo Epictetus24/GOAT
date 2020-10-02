@@ -21,6 +21,77 @@ type Targets struct {
 	Hostlist []Host
 }
 
+type Tool struct {
+	Args   []string
+	Fileid int
+	hostid int
+}
+
+//CheckHeaders performs checks for security headers, or headers which might reveal more information
+func CheckHeaders(host Host) {
+
+	url := "https://"
+	url = url + host.Hostname
+
+	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Println(err)
+	}
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(request)
+	if err != nil {
+		client := &http.Client{Transport: tr}
+		resp, err = client.Do(request)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+
+	color.Cyan("Checking Security headers for %s", host)
+
+	secheaders := []string{"Strict-Transport-Security", "Content-Security-Policy", "X-Frame-Options", "X-Content-Type-Options", "Referrer-Policy", "Permissions-Policy"}
+
+	for i := range secheaders {
+		if resp.Header.Get(secheaders[i]) == "" {
+			color.Red("%s is missing from response\n", secheaders[i])
+
+		} else {
+			color.Green("%s is set\n", secheaders[i])
+			color.Green("%s: %s\n", secheaders[i], resp.Header.Get(secheaders[i]))
+
+		}
+	}
+
+	detailheaders := []string{"Server", "X-Powered-By", "X-AspNet-Version"}
+
+	color.Cyan("Checking Details/Verbose headers for %s", host)
+
+	for i := range detailheaders {
+		if resp.Header.Get(detailheaders[i]) == "" {
+			color.Green("%s header not found\n", detailheaders[i])
+
+		} else {
+			color.Red("%s is set\n", detailheaders[i])
+			color.Yellow("%s: %s\n", detailheaders[i], resp.Header.Get(detailheaders[i]))
+
+		}
+	}
+
+	color.Blue("\n Headers returned:\n")
+
+	for k, v := range resp.Header {
+		fmt.Print(k)
+		fmt.Print(" : ")
+		fmt.Println(v)
+	}
+
+}
+
 //CheckMethods - Requests with supplied method and returns the status code.
 func CheckMethods(method string, host Host) int {
 
@@ -65,9 +136,9 @@ func Methods(host Host) {
 		m[methods[i]] = CheckMethods(methods[i], host)
 
 	}
-	fmt.Printf("\n %s Method Results:\n", host)
-	fmt.Println(m)
-	color.Green("Method checks for %s, finished.\n\n", host)
+	fmt.Printf("\n %s Method Results:\n", host.Hostname)
+	fmt.Printf("%v\n", m)
+	color.Green("Method checks for %s, finished.\n\n", host.Hostname)
 
 }
 
