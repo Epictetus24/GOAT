@@ -14,15 +14,13 @@ Internally it checks the following:
 * Which Security headers are returned
 * Any headers which have useful info (Server, X-Powered-By, will add more as I go)
 * Methods which are allowed - but it only checks this on "/" so you will need to still test this elsewhere in the application.
-
-It is reliant on your tools being in the same path, so check your tool locations with "which" and see if they match the ones in scan.go. Gobuster also uses SecLists for the raft-small wordlist.
-
-It also now checks for HTTP methods by itself, and will supply a map with the response code for whether or not it was successful.
+* If a website redirects "/" for example google does this, then it will attempt to modify the host and referer headers and check if the redirect is poisoned.
 
 ![GOAT Example](https://github.com/Epictetus24/GOAT/blob/master/GOAT-Example.png "What it currently looks like")
 
 # Warning
 It now only works concurrently for multiple hosts/domain names so it's less Denial of Servicey, also it won't work if there's an empty newline in the targets file.
+Tool Paths are hardcoded, you may need to modify the path in tools.go to suit your system. 
 
 # Usage
 ```sh
