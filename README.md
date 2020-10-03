@@ -6,10 +6,14 @@ Ideally with the aim of saving some time to focus on the more manual testing :)
 
 Currently it automates the following tools:
 * nmap
-* whatweb
-* gobuster
 * nikto
 * testssl.sh
+
+Internally it checks the following:
+
+* Which Security headers are returned
+* Any headers which have useful info (Server, X-Powered-By, will add more as I go)
+* Methods which are allowed - but it only checks this on "/" so you will need to still test this elsewhere in the application.
 
 It is reliant on your tools being in the same path, so check your tool locations with "which" and see if they match the ones in scan.go. Gobuster also uses SecLists for the raft-small wordlist.
 
@@ -18,12 +22,12 @@ It also now checks for HTTP methods by itself, and will supply a map with the re
 
 
 # Warning
-It now only works concurrently for multiple hosts/domain names so it's less Denial of Service triggering, also it won't work if there's an empty newline in the targets file.
+It now only works concurrently for multiple hosts/domain names so it's less Denial of Servicey, also it won't work if there's an empty newline in the targets file.
 
 # Usage
 ```sh
 
-gowebscan target.txt
+GOAT target.txt
 
 ```
 
