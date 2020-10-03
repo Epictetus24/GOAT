@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/Epictetus24/gowebscan/scan"
+	"github.com/Epictetus24/gowebscan/tools"
 	"github.com/fatih/color"
 )
 
@@ -68,13 +69,10 @@ func populate(file string) scan.Targets {
 	return targets
 }
 
-func intenseChecks(host scan.Host, wg *sync.WaitGroup) {
+func toolChecks(host scan.Host, wg *sync.WaitGroup) {
+
 	defer wg.Done()
-	scan.Testssl(host)
-	scan.Whatweb(host)
-	scan.Nikto(host)
-	scan.Gobust(host)
-	scan.Nmap(host)
+	tools.Toolarmoury(host)
 
 }
 
@@ -98,8 +96,8 @@ func main() {
 	for i, s := range hl {
 
 		color.Yellow("Host tests for %s commencing\n", s.Hostname)
-		//wg.Add(1)
-		//go intenseChecks(hl[i], &wg)
+		wg.Add(1)
+		go toolChecks(hl[i], &wg)
 		wg.Add(1)
 		go simpleChecks(hl[i], &wg)
 
