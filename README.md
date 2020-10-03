@@ -1,4 +1,4 @@
-# gowebscan
+# GOAT - GO Application Tester
 Simple Automator for web security tests.
 
 Really basic web scanner that just automates some common tools that are usually deployed at the start of web application test.
