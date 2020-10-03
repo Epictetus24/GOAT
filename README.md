@@ -19,7 +19,7 @@ It is reliant on your tools being in the same path, so check your tool locations
 
 It also now checks for HTTP methods by itself, and will supply a map with the response code for whether or not it was successful.
 
-
+![GOAT Example](https://github.com/Epictetus24/GOAT/blob/master/GOAT-Example.png "What it currently looks like")
 
 # Warning
 It now only works concurrently for multiple hosts/domain names so it's less Denial of Servicey, also it won't work if there's an empty newline in the targets file.
