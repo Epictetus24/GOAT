@@ -63,7 +63,7 @@ func Toolrun(host scan.Host, tool Tool) {
 	args[tool.Hostid] = host.Hostname
 
 	if tool.Fileid != 0 {
-		args[tool.Fileid] = host.Hostname + "_" + tool.Name
+		args[tool.Fileid] = host.Hostname + "_output/" + host.Hostname + "_" + tool.Name
 	}
 
 	cmd := tool.Path
