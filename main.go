@@ -3,12 +3,14 @@ package main
 import (
 	"bufio"
 	"encoding/csv"
+	"fmt"
 	"log"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Epictetus24/gowebscan/reporting"
 	"github.com/Epictetus24/gowebscan/scan"
@@ -57,15 +59,24 @@ func populate(file string) scan.Targets {
 			var host scan.Host
 			deets := strings.Split(parts[i], ":")
 			if len(deets) < 2 {
-				color.Green("Hostname %s added to list with whatever IP resolves\n", deets[0])
+				color.Green("Hostname %s added to test list with whatever IP resolves\n", deets[0])
 				host.Hostname = deets[0]
 			} else {
-				color.Green("Hostname %s added to list with port %s\n", deets[0], deets[1])
+				color.Green("Hostname %s added to test list with IP %s\n", deets[0], deets[1])
 				host.Hostname = deets[0]
 				host.IP = deets[1]
 			}
 			//host = lookup(host)
-			targets.Hostlist = append(targets.Hostlist, host)
+			seconds := 10
+			timeOut := time.Duration(seconds) * time.Second
+			_, err := net.DialTimeout("tcp", host.Hostname+":"+"443", timeOut)
+			if err == nil {
+				color.Green("Host %s is live, will add to targets.\n", host.Hostname)
+				targets.Hostlist = append(targets.Hostlist, host)
+			} else {
+				fmt.Println(err)
+				color.Red("Host %s couldn't be reached, not adding to target list.\n", host.Hostname)
+			}
 
 		}
 		// Loop over the parts from the string.
@@ -127,8 +138,8 @@ func main() {
 			log.Fatalf("failed creating file: %s", err)
 		}
 
-		//wg.Add(1)
-		//go toolChecks(hl[i], &wg)
+		wg.Add(1)
+		go toolChecks(hl[i], &wg)
 		wg.Add(1)
 		go simpleChecks(hl[i], &wg, csvFile)
 	}
