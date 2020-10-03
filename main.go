@@ -7,8 +7,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Epictetus24/gowebscan/scan"
-	"github.com/Epictetus24/gowebscan/tools"
+	"github.com/Epictetus24/GOAT/scan"
+	"github.com/Epictetus24/GOAT/tools"
 	"github.com/fatih/color"
 )
 
