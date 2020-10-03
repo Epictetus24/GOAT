@@ -3,9 +3,13 @@ package scan
 import (
 	"crypto/tls"
 	"fmt"
+	"html/template"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 
+	"github.com/Epictetus24/gowebscan/reporting"
 	"github.com/fatih/color"
 )
 
@@ -20,8 +24,38 @@ type Targets struct {
 	Hostlist []Host
 }
 
+type deetheaders struct {
+}
+
+func resptostring(resp *http.Response) string {
+
+	var toolout string
+
+	var headerString string
+	for k, v := range resp.Header {
+		headerString = headerString + k
+		headerString = headerString + ": "
+		headerString = headerString + v[0]
+		headerString = headerString + "\n"
+
+	}
+
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println(err)
+	}
+	bodyString := string(bodyBytes)
+
+	toolout = headerString + bodyString
+
+	return toolout
+
+}
+
 //CheckHeaders performs checks for security headers, or headers which might reveal more information
-func CheckHeaders(host Host) {
+func CheckHeaders(host Host) reporting.Vulncollect {
+
+	var headervulns reporting.Vulncollect
 
 	url := "https://"
 	url = url + host.Hostname
@@ -49,13 +83,56 @@ func CheckHeaders(host Host) {
 
 	secheaders := []string{"Strict-Transport-Security", "Content-Security-Policy", "X-Frame-Options", "X-Content-Type-Options", "Referrer-Policy", "Permissions-Policy"}
 
+	secsummaries := []string{
+		"The Strict-Transport-Security Header was missing from the applications HTTP responses",
+		"The Content-Security-Policy was missing from the applications HTTP responses",
+		"The application was missing the X-Frame-Options header and is likely vulnerable to Cross-Frame Scripting",
+		"The X-Content-Type-Options Header was missing from the applications HTTP responses",
+		"The Referrer-Policy Header was missing from the applications HTTP responses",
+		"The Permissions-Policy Header was missing from the applications HTTP responses ",
+	}
+	secrecommendations := []string{
+		"Rootshell Recommend that the application return the Strict-Transport-Security Header",
+		"Rootshell Recommend that the application return the Content-Security-Policy Header",
+		"Rootshell Recommend that the application return the X-Frame-Options Header",
+		"Rootshell Recommend that the application return the X-Content-Type-Options Header",
+		"Rootshell Recommend that the application return the Referrer-Policy Header",
+		"Rootshell Recommend that the application return the Permissions-Policy Header",
+	}
+
 	for i := range secheaders {
-		if resp.Header.Get(secheaders[i]) == "" {
+		if resp.Header.Get(secheaders[i]) == "" && secheaders[i] != "X-Frame-Options" {
+			var vuln reporting.Vuln
+			vuln.Name = "Application missing Security Header:" + secheaders[i]
+			vuln.Summary = secsummaries[i]
+			vuln.Recommendation = secrecommendations[i]
+			if secheaders[i] == "Strict-Transport-Security" {
+				vuln.Riskrating = 2
+			} else {
+				vuln.Riskrating = 1
+			}
+
+			vuln.Technicaldetails = "The host was missing the " + secheaders[i] + " from its response."
+			vuln.Technicaldetails = vuln.Technicaldetails + "Example response:\n" + resptostring(resp) + "\n"
+
+			headervulns.Vulnlist = append(headervulns.Vulnlist, vuln)
+
 			color.Red("%s is missing from response\n", secheaders[i])
+
+		} else if secheaders[i] == "X-Frame-Options" && resp.Header.Get(secheaders[i]) == "" {
+			color.Yellow("X-Frame-Options is missing, will generate clickjack poc\n")
+			clickjack(host)
 
 		} else {
 			color.Green("%s is set\n", secheaders[i])
-			color.Green("%s: %s\n", secheaders[i], resp.Header.Get(secheaders[i]))
+			if secheaders[i] == "Strict-Transport-Security" && resp.Header.Get(secheaders[i]) != "max-age=31536000" {
+				color.Yellow("Max-Age may not be correct or around one year\n")
+				color.Yellow("%s: %s\n", secheaders[i], resp.Header.Get(secheaders[i]))
+
+			} else {
+				color.Green("%s: %s\n", secheaders[i], resp.Header.Get(secheaders[i]))
+
+			}
 
 		}
 	}
@@ -64,6 +141,8 @@ func CheckHeaders(host Host) {
 
 	color.Cyan("Checking Details/Verbose headers for %s", host)
 
+	var presentdetailHeaders []string
+
 	for i := range detailheaders {
 		if resp.Header.Get(detailheaders[i]) == "" {
 			color.Green("%s header not found\n", detailheaders[i])
@@ -71,8 +150,26 @@ func CheckHeaders(host Host) {
 		} else {
 			color.Red("%s is set\n", detailheaders[i])
 			color.Yellow("%s: %s\n", detailheaders[i], resp.Header.Get(detailheaders[i]))
+			headerfound := detailheaders[i] + ": " + resp.Header.Get(detailheaders[i])
+			presentdetailHeaders = append(presentdetailHeaders, headerfound)
 
 		}
+	}
+
+	if len(presentdetailHeaders) > 0 {
+		var vuln reporting.Vuln
+		vuln.Name = "HTTP Headers reveal potentially sensitive information"
+		vuln.Summary = "One or more HTTP headers revealed information which could help an attacker enumerate the application software in use."
+		vuln.Recommendation = "Rootshell recommends removing or obscuring any headers which may help an attacker identify application software."
+		vuln.Technicaldetails = "The application returned the following headers, which may help identify software:\n"
+		var headersfound string
+		for v := range presentdetailHeaders {
+			headersfound = headersfound + presentdetailHeaders[v]
+			headersfound = headersfound + "\n"
+		}
+		vuln.Riskrating = 1
+		vuln.Technicaldetails = vuln.Technicaldetails + headersfound
+		headervulns.Vulnlist = append(headervulns.Vulnlist, vuln)
 	}
 
 	color.Blue("\nHeaders returned:\n")
@@ -81,6 +178,121 @@ func CheckHeaders(host Host) {
 		fmt.Print(k)
 		fmt.Print(" : ")
 		fmt.Println(v)
+	}
+
+	return headervulns
+
+}
+
+func clickjack(host Host) {
+	var x = `
+<!doctype html>
+<html>
+ <title>Crossframe Demo: {{.}}</title>
+ <h1>Cross Frame test for site {{.}}</h1>
+  <iframe src="https://{{.}}" width="1280" height="720"> </iframe>
+  <br>
+  <body> If webcontent is displayed above, the site is vulnerable to Clickjacking/Cross-Frame Scripting </body>
+</html>
+`
+	t, err := template.New("crossframe").Parse(x)
+
+	// Create the file
+	path := host.Hostname + "_output"
+	os.Chdir(path)
+	filename := host.Hostname + "_crossframe.html"
+	f, err := os.Create(filename)
+	if err != nil {
+		// handle error
+	}
+
+	// Execute the template to the file.
+	err = t.Execute(f, host.Hostname)
+	if err != nil {
+		// handle error
+	}
+
+	// Close the file when done.
+	f.Close()
+	os.Chdir("..")
+
+}
+
+//CheckHostFuckery will mess with the host name if a redirect occurs, and check if the redirect takes it to a new website.
+func CheckHostFuckery(host Host) {
+
+	url := "https://"
+	url = url + host.Hostname
+	url = url + ""
+
+	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		log.Println(err)
+	}
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
+	var i int
+	for i < 100 {
+		client := &http.Client{
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			}}
+
+		resp, err := client.Do(request)
+
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		if resp.StatusCode == 200 {
+			fmt.Println("Host Header Check Done!")
+			break
+		} else {
+			url = resp.Header.Get("Location")
+			i++
+		}
+		if resp.StatusCode >= 300 && resp.StatusCode <= 399 {
+			color.Yellow("\nRecieved %d status code from host %s\nWants to Redirect to %s", resp.StatusCode, host.Hostname, resp.Header.Get("Location"))
+			request.Host = "pornhub.com"
+			redirfuckery, err := client.Do(request)
+			if err != nil {
+				client := &http.Client{Transport: tr}
+				redirfuckery, err = client.Do(request)
+				if err != nil {
+					log.Println(err)
+				}
+			}
+			color.Yellow("\nAttempted to pollute Host header with %s on host: %s \n", request.Host, host.Hostname)
+			color.Yellow("Location header became: %s ", redirfuckery.Header.Get("Location"))
+			if redirfuckery.Header.Get("Location") != resp.Header.Get("Location") {
+				color.Red("Redirects based on host header!\n")
+			}
+			request.Host = host.Hostname
+			request.Header.Set("Referer", "pornhub.com")
+			redirfuckery, err = client.Do(request)
+			if err != nil {
+				client := &http.Client{Transport: tr}
+				redirfuckery, err = client.Do(request)
+				if err != nil {
+					log.Println(err)
+				}
+			}
+			color.Yellow("\nAttempted to pollute Referer header with %s on host: %s \n", request.Header.Get("Referer"), host.Hostname)
+			color.Yellow("Location header became: %s ", redirfuckery.Header.Get("Location"))
+			if redirfuckery.Header.Get("Location") != resp.Header.Get("Location") {
+				color.Red("Redirects based on Referer header!\n")
+			} else {
+				color.Green("Does not redirect based on Referer header")
+			}
+
+			return
+		} else {
+			color.Green("\nHost %s did not redirect\n", host.Hostname)
+			return
+		}
 	}
 
 }
