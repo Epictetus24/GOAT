@@ -2,13 +2,17 @@ package main
 
 import (
 	"bufio"
+	"encoding/csv"
+	"log"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
-	"github.com/Epictetus24/GOAT/scan"
-	"github.com/Epictetus24/GOAT/tools"
+	"github.com/Epictetus24/gowebscan/reporting"
+	"github.com/Epictetus24/gowebscan/scan"
+	"github.com/Epictetus24/gowebscan/tools"
 	"github.com/fatih/color"
 )
 
@@ -76,10 +80,28 @@ func toolChecks(host scan.Host, wg *sync.WaitGroup) {
 
 }
 
-func simpleChecks(host scan.Host, wg *sync.WaitGroup) {
+func simpleChecks(host scan.Host, wg *sync.WaitGroup, csvFile *os.File) {
+	defer csvFile.Close()
 	defer wg.Done()
-	scan.CheckHeaders(host)
+	var Headervulns reporting.Vulncollect
+	Headervulns = scan.CheckHeaders(host)
 	scan.Methods(host)
+	scan.CheckHostFuckery(host)
+
+	csvwriter := csv.NewWriter(csvFile)
+
+	vl := Headervulns.Vulnlist
+	for i := range vl {
+		vd := vl[i]
+		riskrating := strconv.Itoa(vd.Riskrating)
+		headings := []string{"Name", "Risk_rating", "Summary", "Technical_details", "Recommendation"}
+		csvwriter.Write(headings)
+		vulnRow := []string{vd.Name, riskrating, vd.Summary, vd.Technicaldetails, vd.Recommendation}
+		csvwriter.Write(vulnRow)
+
+	}
+
+	csvwriter.Flush()
 
 }
 
@@ -96,11 +118,19 @@ func main() {
 	for i, s := range hl {
 
 		color.Yellow("Host tests for %s commencing\n", s.Hostname)
-		wg.Add(1)
-		go toolChecks(hl[i], &wg)
-		wg.Add(1)
-		go simpleChecks(hl[i], &wg)
+		path := s.Hostname + "_output"
+		reportpath := "report_" + s.Hostname + ".csv"
+		os.Mkdir(path, 0755)
+		csvFile, err := os.Create(reportpath)
 
+		if err != nil {
+			log.Fatalf("failed creating file: %s", err)
+		}
+
+		//wg.Add(1)
+		//go toolChecks(hl[i], &wg)
+		wg.Add(1)
+		go simpleChecks(hl[i], &wg, csvFile)
 	}
 
 	wg.Wait()
