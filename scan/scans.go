@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os/exec"
 
 	"github.com/fatih/color"
 )
@@ -19,12 +18,6 @@ type Host struct {
 //Targets stores all the hosts in a slice
 type Targets struct {
 	Hostlist []Host
-}
-
-type Tool struct {
-	Args   []string
-	Fileid int
-	hostid int
 }
 
 //CheckHeaders performs checks for security headers, or headers which might reveal more information
@@ -52,7 +45,7 @@ func CheckHeaders(host Host) {
 		}
 	}
 
-	color.Cyan("Checking Security headers for %s", host)
+	color.Cyan("\n\nChecking Security headers for %s", host)
 
 	secheaders := []string{"Strict-Transport-Security", "Content-Security-Policy", "X-Frame-Options", "X-Content-Type-Options", "Referrer-Policy", "Permissions-Policy"}
 
@@ -82,7 +75,7 @@ func CheckHeaders(host Host) {
 		}
 	}
 
-	color.Blue("\n Headers returned:\n")
+	color.Blue("\nHeaders returned:\n")
 
 	for k, v := range resp.Header {
 		fmt.Print(k)
@@ -140,119 +133,4 @@ func Methods(host Host) {
 	fmt.Printf("%v\n", m)
 	color.Green("Method checks for %s, finished.\n\n", host.Hostname)
 
-}
-
-//Nikto runs nikto
-func Nikto(host Host) {
-
-	filename := host.Hostname + "-nikto_output.txt"
-
-	args := []string{"nikto", "-host", "hostname", "-output", "filename", "-port", "443"}
-	args[2] = host.Hostname
-	args[4] = filename
-
-	nikto := exec.Command("/bin/bash", args[0:]...)
-	if err := nikto.Start(); err != nil {
-		color.Red("Failed to start nikto: %v", err)
-		return
-	}
-
-	color.Cyan("Nikto running against host %s on port 443\n", host.Hostname)
-
-	if err := nikto.Wait(); err != nil {
-		color.Red("nikto returned error: %v", err)
-	}
-
-	color.Green("Nikto finished, file for %s saved as %s\n", host.Hostname, filename)
-
-}
-
-//Testssl runs testssl
-func Testssl(host Host) {
-
-	args := []string{"/opt/testssl.sh/testssl.sh", "--html", "--log", "hostname"}
-	args[3] = host.Hostname
-
-	testssl := exec.Command("/bin/bash", args[0:]...)
-	if err := testssl.Start(); err != nil {
-		color.Red("Failed to start testssl: %v", err)
-		return
-	}
-
-	color.Blue("testssl running against host %s\n", host.Hostname)
-
-	if err := testssl.Wait(); err != nil {
-		color.Red("testssl returned error: %v", err)
-	}
-
-	color.Green("testssl finished, file for %s saved.\n", host.Hostname)
-}
-
-//Gobust runs gobuster with raft-small-words
-func Gobust(host Host) {
-
-	args := []string{"dir", "-u", "hostname", "-w", "/opt/SecLists/Discovery/Web-Content/raft-small-words-lowercase.txt", "-o", "hostname-gobuster", "-t4"}
-	args[2] = host.Hostname
-	filename := host.Hostname + "-gobust.txt"
-	args[6] = filename
-
-	gobust := exec.Command("/usr/bin/gobuster", args[0:]...)
-	if err := gobust.Start(); err != nil {
-		color.Red("Failed to start gobuster: %v", err)
-		return
-	}
-
-	color.Yellow("gobust running against host %s\n", host.Hostname)
-
-	if err := gobust.Wait(); err != nil {
-		color.Red("gobust returned error: %v", err)
-	}
-
-	color.Green("gobust finished, file for %s saved as %s.\n", host.Hostname, args[6])
-}
-
-//Whatweb runs whatweb in an aggressive and verbose manner
-func Whatweb(host Host) {
-
-	args := []string{"-v", "-a", "4", "host", "--log-verbose="}
-	args[3] = host.Hostname
-	filename := "--log-verbose=" + host.Hostname + "-whatweb.txt"
-	args[4] = filename
-
-	gobust := exec.Command("/usr/bin/whatweb", args[0:]...)
-	if err := gobust.Start(); err != nil {
-		color.Red("Failed to start whatweb: %v", err)
-		return
-	}
-
-	color.Blue("whatweb running against host %s\n", host.Hostname)
-
-	if err := gobust.Wait(); err != nil {
-		color.Red("whatweb returned error: %v", err)
-	}
-
-	color.Green("whatweb finished, file for %s saved as %s.\n", host.Hostname, args[4])
-}
-
-//Nmap does a nmap version scan of the host through all tcp ports and outputs all formats
-func Nmap(host Host) {
-
-	args := []string{"-sV", "-O", "-Pn", "host.co.uk", "-p0-", "-oA", "full_tcp", "-T3", "-vv"}
-	args[3] = host.Hostname
-	filename := "fulltcp_nmap_" + host.Hostname
-	args[6] = filename
-
-	gobust := exec.Command("/usr/bin/nmap", args[0:]...)
-	if err := gobust.Start(); err != nil {
-		color.Red("Failed to start nmap: %v", err)
-		return
-	}
-
-	color.Green("nmap full tcp running against host %s\n", host.Hostname)
-
-	if err := gobust.Wait(); err != nil {
-		color.Red("nmap returned error: %v", err)
-	}
-
-	color.Green("nmap finished, file for %s saved as %s.\n", host.Hostname, args[6])
 }
