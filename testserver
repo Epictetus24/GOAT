@@ -1,0 +1,40 @@
+#simple server to run for testing the tool, I'd remove it from this folder so it doesn't cause confusion if you're working on the tool.
+
+package main
+
+import (
+    // "fmt"
+    // "io"
+    "net/http"
+    "log"
+)
+
+func redirect(w http.ResponseWriter, req *http.Request) {
+    // remove/add not default ports from req.Host
+    target := "https://" + req.Host + "/hello"
+    if len(req.URL.RawQuery) > 0 {
+        target += "?" + req.URL.RawQuery
+    }
+    log.Printf("redirect to: %s", target)
+    http.Redirect(w, req, target,
+            // see comments below and consider the codes 308, 302, or 301
+            http.StatusTemporaryRedirect)
+}
+
+func HelloServer(w http.ResponseWriter, req *http.Request) {
+    w.Header().Set("Content-Type", "text/plain")
+    w.Header().Set("Strict-Transport-Security", "max-age=500")
+    w.Header().Set("Server", "NSA SUPER SECRET SERVER")
+    w.Write([]byte("This is an example of a poorly configured/written web server.\n"))
+    // fmt.Fprintf(w, "This is an example server.\n")
+    // io.WriteString(w, "This is an example server.\n")
+}
+
+func main() {
+    go http.HandleFunc("/", redirect)
+    http.HandleFunc("/hello", HelloServer)
+    err := http.ListenAndServeTLS(":443", "/root/fullchain.pem", "/root/privkey.pem", nil)
+    if err != nil {
+        log.Fatal("ListenAndServe: ", err)
+    }
+}
