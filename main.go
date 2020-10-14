@@ -12,9 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Epictetus24/gowebscan/reporting"
-	"github.com/Epictetus24/gowebscan/scan"
-	"github.com/Epictetus24/gowebscan/tools"
+	"github.com/Epictetus24/GOAT/reporting"
+	"github.com/Epictetus24/GOAT/scan"
+	"github.com/Epictetus24/GOAT/tools"
 	"github.com/fatih/color"
 )
 
@@ -102,12 +102,12 @@ func simpleChecks(host scan.Host, wg *sync.WaitGroup, csvFile *os.File) {
 	csvwriter := csv.NewWriter(csvFile)
 
 	vl := Headervulns.Vulnlist
+	headings := []string{"name", "risk_rating", "summary", "technical_details", "recommendation", "finding", "affected_hosts"}
+	csvwriter.Write(headings)
 	for i := range vl {
 		vd := vl[i]
 		riskrating := strconv.Itoa(vd.Riskrating)
-		headings := []string{"Name", "Risk_rating", "Summary", "Technical_details", "Recommendation"}
-		csvwriter.Write(headings)
-		vulnRow := []string{vd.Name, riskrating, vd.Summary, vd.Technicaldetails, vd.Recommendation}
+		vulnRow := []string{vd.Name, riskrating, vd.Summary, vd.Technicaldetails, vd.Recommendation, host.Hostname}
 		csvwriter.Write(vulnRow)
 
 	}
