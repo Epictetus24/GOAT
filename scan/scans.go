@@ -1,6 +1,7 @@
 package scan
 
 import (
+	"bytes"
 	"crypto/tls"
 	"fmt"
 	"html/template"
@@ -9,7 +10,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Epictetus24/gowebscan/reporting"
+	"github.com/Epictetus24/GOAT/reporting"
 	"github.com/fatih/color"
 )
 
@@ -81,31 +82,15 @@ func CheckHeaders(host Host) reporting.Vulncollect {
 
 	color.Cyan("\n\nChecking Security headers for %s", host)
 
-	secheaders := []string{"Strict-Transport-Security", "Content-Security-Policy", "X-Frame-Options", "X-Content-Type-Options", "Referrer-Policy", "Permissions-Policy"}
-
-	secsummaries := []string{
-		"The Strict-Transport-Security Header was missing from the applications HTTP responses",
-		"The Content-Security-Policy was missing from the applications HTTP responses",
-		"The application was missing the X-Frame-Options header and is likely vulnerable to Cross-Frame Scripting",
-		"The X-Content-Type-Options Header was missing from the applications HTTP responses",
-		"The Referrer-Policy Header was missing from the applications HTTP responses",
-		"The Permissions-Policy Header was missing from the applications HTTP responses ",
-	}
-	secrecommendations := []string{
-		"Rootshell Recommend that the application return the Strict-Transport-Security Header",
-		"Rootshell Recommend that the application return the Content-Security-Policy Header",
-		"Rootshell Recommend that the application return the X-Frame-Options Header",
-		"Rootshell Recommend that the application return the X-Content-Type-Options Header",
-		"Rootshell Recommend that the application return the Referrer-Policy Header",
-		"Rootshell Recommend that the application return the Permissions-Policy Header",
-	}
+	secheaders := []string{"Strict-Transport-Security", "Content-Security-Policy", "X-Frame-Options", "X-Content-Type-Options", "Referrer-Policy", "Permissions-Policy", "X-XSS-Protection"}
 
 	for i := range secheaders {
 		if resp.Header.Get(secheaders[i]) == "" && secheaders[i] != "X-Frame-Options" {
 			var vuln reporting.Vuln
-			vuln.Name = "Application missing Security Header:" + secheaders[i]
-			vuln.Summary = secsummaries[i]
-			vuln.Recommendation = secrecommendations[i]
+			vuln.Name = "Application missing " + secheaders[i] + " Header."
+			vuln.Summary = reporting.Hsecsummaries[i]
+			vuln.Finding = reporting.Hsecfindings[i]
+			vuln.Recommendation = reporting.Hsecrecommendations[i]
 			if secheaders[i] == "Strict-Transport-Security" {
 				vuln.Riskrating = 2
 			} else {
@@ -121,7 +106,20 @@ func CheckHeaders(host Host) reporting.Vulncollect {
 
 		} else if secheaders[i] == "X-Frame-Options" && resp.Header.Get(secheaders[i]) == "" {
 			color.Yellow("X-Frame-Options is missing, will generate clickjack poc\n")
-			clickjack(host)
+			poc := clickjack(host)
+			var vuln reporting.Vuln
+			vuln.Name = "Cross-Site Framing"
+			vuln.Summary = reporting.Hsecsummaries[i]
+			vuln.Finding = reporting.Hsecfindings[i]
+			vuln.Recommendation = reporting.Hsecrecommendations[i]
+			vuln.Riskrating = 1
+
+			vuln.Technicaldetails = "The host was missing the " + secheaders[i] + " from its response."
+			vuln.Technicaldetails = vuln.Technicaldetails + "Example response:\n" + resptostring(resp) + "\n"
+			vuln.Technicaldetails = vuln.Technicaldetails + "\n The following html code can be used to test if the website can be embedded in an Iframe."
+			vuln.Technicaldetails = vuln.Technicaldetails + "\n" + poc
+
+			headervulns.Vulnlist = append(headervulns.Vulnlist, vuln)
 
 		} else {
 			color.Green("%s is set\n", secheaders[i])
@@ -184,7 +182,7 @@ func CheckHeaders(host Host) reporting.Vulncollect {
 
 }
 
-func clickjack(host Host) {
+func clickjack(host Host) string {
 	var x = `
 <!doctype html>
 <html>
@@ -215,7 +213,13 @@ func clickjack(host Host) {
 	// Close the file when done.
 	f.Close()
 	os.Chdir("..")
+	var tpl bytes.Buffer
+	if err := t.Execute(&tpl, host.Hostname); err != nil {
+		//do something probably err
+	}
 
+	poc := tpl.String()
+	return poc
 }
 
 //CheckHostFuckery will mess with the host name if a redirect occurs, and check if the redirect takes it to a new website.
@@ -282,7 +286,7 @@ func CheckHostFuckery(host Host) {
 			}
 			color.Yellow("\nAttempted to pollute Referer header with %s on host: %s \n", request.Header.Get("Referer"), host.Hostname)
 			color.Yellow("Location header became: %s ", redirfuckery.Header.Get("Location"))
-			if redirfuckery.Header.Get("Location") != resp.Header.Get("Location") {
+			if redirfuckery.Header.Get("Location") != resp.Header.Get("Location") && redirfuckery.Header.Get("Location") != "" {
 				color.Red("Redirects based on Referer header!\n")
 			} else {
 				color.Green("Does not redirect based on Referer header")
