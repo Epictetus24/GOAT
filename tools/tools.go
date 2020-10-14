@@ -3,7 +3,7 @@ package tools
 import (
 	"os/exec"
 
-	"github.com/Epictetus24/gowebscan/scan"
+	"github.com/Epictetus24/GOAT/scan"
 
 	"github.com/fatih/color"
 )
