@@ -250,6 +250,9 @@ func CheckHostFuckery(host Host) {
 		if err != nil {
 			fmt.Println(err)
 		}
+		if resp == nil {
+			return
+		}
 
 		if resp.StatusCode == 200 {
 			fmt.Println("Host Header Check Done!")
@@ -260,7 +263,7 @@ func CheckHostFuckery(host Host) {
 		}
 		if resp.StatusCode >= 300 && resp.StatusCode <= 399 {
 			color.Yellow("\nRecieved %d status code from host %s\nWants to Redirect to %s", resp.StatusCode, host.Hostname, resp.Header.Get("Location"))
-			request.Host = "pornhub.com"
+			request.Host = "google.com"
 			redirfuckery, err := client.Do(request)
 			if err != nil {
 				client := &http.Client{Transport: tr}
@@ -275,7 +278,7 @@ func CheckHostFuckery(host Host) {
 				color.Red("Redirects based on host header!\n")
 			}
 			request.Host = host.Hostname
-			request.Header.Set("Referer", "pornhub.com")
+			request.Header.Set("Referer", "google.com")
 			redirfuckery, err = client.Do(request)
 			if err != nil {
 				client := &http.Client{Transport: tr}
@@ -324,6 +327,9 @@ func CheckMethods(method string, host Host) int {
 		if err != nil {
 			log.Println(err)
 		}
+	}
+	if resp == nil {
+		return 0
 	}
 
 	if resp.StatusCode >= 200 && resp.StatusCode <= 299 {
