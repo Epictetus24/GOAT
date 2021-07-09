@@ -18,7 +18,7 @@ import (
 	"github.com/fatih/color"
 )
 
-func lookup(host scan.Host) (hostip scan.Host) {
+func Lookup(host scan.Host) (hostip scan.Host) {
 	addr, err := net.LookupIP(host.Hostname)
 	if err != nil {
 		os.Exit(1)
@@ -42,7 +42,7 @@ func lookup(host scan.Host) (hostip scan.Host) {
 
 }
 
-func populate(file string) scan.Targets {
+func Populate(file string) scan.Targets {
 	// Part 1: open the file and scan it.
 	f, _ := os.Open(file)
 	scanner := bufio.NewScanner(f)
@@ -61,17 +61,26 @@ func populate(file string) scan.Targets {
 			if len(deets) < 2 {
 				color.Green("Hostname %s added to test list with whatever IP resolves\n", deets[0])
 				host.Hostname = deets[0]
+				host.Port = "443"
+			} else if len(deets) > 2 {
+				host.Hostname = deets[0]
+				host.IP = deets[1]
+				host.Port = deets[2]
+
 			} else {
 				color.Green("Hostname %s added to test list with IP %s\n", deets[0], deets[1])
 				host.Hostname = deets[0]
 				host.IP = deets[1]
+				host.Port = "443"
 			}
 			//host = lookup(host)
 			seconds := 10
 			timeOut := time.Duration(seconds) * time.Second
-			_, err := net.DialTimeout("tcp", host.Hostname+":"+"443", timeOut)
+
+			_, err := net.DialTimeout("tcp", host.Hostname+":"+host.Port, timeOut)
+
 			if err == nil {
-				color.Green("Host %s is live, will add to targets.\n", host.Hostname)
+				color.Green("Host %s:%s is live, will add to targets.\n", host.Hostname, host.Port)
 				targets.Hostlist = append(targets.Hostlist, host)
 			} else {
 				fmt.Println(err)
@@ -84,14 +93,14 @@ func populate(file string) scan.Targets {
 	return targets
 }
 
-func toolChecks(host scan.Host, wg *sync.WaitGroup) {
+func ToolChecks(host scan.Host, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 	tools.Toolarmoury(host)
 
 }
 
-func simpleChecks(host scan.Host, wg *sync.WaitGroup, csvFile *os.File) {
+func SimpleChecks(host scan.Host, wg *sync.WaitGroup, csvFile *os.File) {
 	defer csvFile.Close()
 	defer wg.Done()
 	var Headervulns reporting.Vulncollect
@@ -122,7 +131,7 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	targets := populate(file)
+	targets := Populate(file)
 
 	hl := targets.Hostlist
 
@@ -139,9 +148,9 @@ func main() {
 		}
 
 		wg.Add(1)
-		go toolChecks(hl[i], &wg)
+		go ToolChecks(hl[i], &wg)
 		wg.Add(1)
-		go simpleChecks(hl[i], &wg, csvFile)
+		go SimpleChecks(hl[i], &wg, csvFile)
 	}
 
 	wg.Wait()
