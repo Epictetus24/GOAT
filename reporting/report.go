@@ -59,8 +59,8 @@ var Hsecsummaries = []string{
 
 //HSecrecommendations is the recommendation for header security.
 var Hsecrecommendations = []string{
-	"Rootshell Recommend that the application return the Strict-Transport-Security Header",
-	`Rootshell recommends that the server be configured to send the \"Content-Security-Policy\" header.
+	" YOURCOMPANY Recommend that the application return the Strict-Transport-Security Header",
+	` YOURCOMPANY recommends that the server be configured to send the \"Content-Security-Policy\" header.
 	For Apache, see: http://httpd.apache.org/docs/2.2/mod/mod_headers.html 
 	For nginx, see: http://nginx.org/en/docs/http/ngx_http_headers_module.html 
 	For IIS, see: https://technet.microsoft.com/pl-pl/library/cc753133%28v=ws.10%29.aspx 
@@ -73,7 +73,7 @@ var Hsecrecommendations = []string{
 	 </httpProtocol>
 	</system.webServer>
 	`,
-	`Rootshell recommends that the sites return a response header with the name X-Frame-Options and the value DENY to prevent framing altogether, or the value SAMEORIGIN to allow framing only by pages on the same origin as the response itself. In addition, Rootshell also recommends that frame-busting code be employed within all the hosted applications.
+	` YOURCOMPANY recommends that the sites return a response header with the name X-Frame-Options and the value DENY to prevent framing altogether, or the value SAMEORIGIN to allow framing only by pages on the same origin as the response itself. In addition,  YOURCOMPANY also recommends that frame-busting code be employed within all the hosted applications.
 	Frame busting is a method for ensuring that a website is not loaded within an iframe. This is usually performed with JavaScript similar to:
 	if (top !=self) (top.location = self.location;)
 	This however, can be defeated in some browsers, so the current best practice is to use the following suggested code:
@@ -98,20 +98,20 @@ var Hsecrecommendations = []string{
 	}
 	</script>
 	`,
-	`Rootshell recommends that the server is configured to send the \"X-Content-Type-Options\" header with value \"nosniff\" on all outgoing requests.
+	` YOURCOMPANY recommends that the server is configured to send the \"X-Content-Type-Options\" header with value \"nosniff\" on all outgoing requests.
 	For Apache, see: http://httpd.apache.org/docs/2.2/mod/mod_headers.html 
 	For IIS, see: https://technet.microsoft.com/pl-pl/library/cc753133%28v=ws.10%29.aspx 
 	For nginx, see: http://nginx.org/en/docs/http/ngx_http_headers_module.html 
 	`,
-	`Rootshell recommends appropriately setting the "Referrer-Policy" HTTP response header for all server responses.
+	` YOURCOMPANY recommends appropriately setting the "Referrer-Policy" HTTP response header for all server responses.
 	If referrer headers are not specifically needed by the application when visiting other sites, "Referrer-Policy: no-referrer" can be used to effectively disable them in user's browsers.
 	If referrer headers are needed by the application, they can be configured more securely with "Referrer-Policy: no-referrer-when-downgrade" to avoid disclosing the full URL path when a connection is downgraded to HTTP from HTTPS. Other options may also be considered to match your specific circumstances.
 	`,
-	`Rootshell recommends appropriately setting the "Permissions-Policy" HTTP response header for all server responses.
+	` YOURCOMPANY recommends appropriately setting the "Permissions-Policy" HTTP response header for all server responses.
 	Disable all browser features which your site does not make use of to minimise your user's exposure. 
 	If embedding external content in your application, determine which browser features this embedded content requires access to and implement a whitelisting approach to allow appropriate access.
 	`,
-	`Rootshell recommends that the server is configured to send the \"X-XSS-Protection\" header with value \"1\" (i.e. Enabled) on all outgoing requests.
+	` YOURCOMPANY recommends that the server is configured to send the \"X-XSS-Protection\" header with value \"1\" (i.e. Enabled) on all outgoing requests.
 	For Apache, see: http://httpd.apache.org/docs/2.2/mod/mod_headers.html 
 	For IIS, see: https://technet.microsoft.com/pl-pl/library/cc753133%28v=ws.10%29.aspx 
 	For nginx, see: http://nginx.org/en/docs/http/ngx_http_headers_module.html 
