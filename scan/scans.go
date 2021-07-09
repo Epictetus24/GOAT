@@ -18,6 +18,7 @@ import (
 type Host struct {
 	Hostname string
 	IP       string
+	Port     string
 }
 
 //Targets stores all the hosts in a slice
@@ -59,7 +60,7 @@ func CheckHeaders(host Host) reporting.Vulncollect {
 	var headervulns reporting.Vulncollect
 
 	url := "https://"
-	url = url + host.Hostname
+	url = url + host.Hostname + ":" + host.Port
 
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -194,6 +195,9 @@ func clickjack(host Host) string {
 </html>
 `
 	t, err := template.New("crossframe").Parse(x)
+	if err != nil {
+		fmt.Println(err)
+	}
 
 	// Create the file
 	path := host.Hostname + "_output"
@@ -202,12 +206,16 @@ func clickjack(host Host) string {
 	f, err := os.Create(filename)
 	if err != nil {
 		// handle error
+		fmt.Println(err)
 	}
 
+	url := host.Hostname + ":" + host.Port
+
 	// Execute the template to the file.
-	err = t.Execute(f, host.Hostname)
+	err = t.Execute(f, url)
 	if err != nil {
 		// handle error
+		fmt.Println(err)
 	}
 
 	// Close the file when done.
@@ -216,6 +224,7 @@ func clickjack(host Host) string {
 	var tpl bytes.Buffer
 	if err := t.Execute(&tpl, host.Hostname); err != nil {
 		//do something probably err
+		fmt.Println(err)
 	}
 
 	poc := tpl.String()
@@ -226,8 +235,7 @@ func clickjack(host Host) string {
 func CheckHostFuckery(host Host) {
 
 	url := "https://"
-	url = url + host.Hostname
-	url = url + ""
+	url = url + host.Hostname + ":" + host.Port
 
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -263,7 +271,7 @@ func CheckHostFuckery(host Host) {
 		}
 		if resp.StatusCode >= 300 && resp.StatusCode <= 399 {
 			color.Yellow("\nRecieved %d status code from host %s\nWants to Redirect to %s", resp.StatusCode, host.Hostname, resp.Header.Get("Location"))
-			request.Host = "google.com"
+			request.Host = "nettitude.com"
 			redirfuckery, err := client.Do(request)
 			if err != nil {
 				client := &http.Client{Transport: tr}
@@ -278,7 +286,7 @@ func CheckHostFuckery(host Host) {
 				color.Red("Redirects based on host header!\n")
 			}
 			request.Host = host.Hostname
-			request.Header.Set("Referer", "google.com")
+			request.Header.Set("Referer", "nettitude.com")
 			redirfuckery, err = client.Do(request)
 			if err != nil {
 				client := &http.Client{Transport: tr}
@@ -308,7 +316,7 @@ func CheckHostFuckery(host Host) {
 func CheckMethods(method string, host Host) int {
 
 	url := "https://"
-	url = url + host.Hostname
+	url = url + host.Hostname + ":" + host.Port
 
 	request, err := http.NewRequest(method, url, nil)
 	if err != nil {
@@ -328,6 +336,7 @@ func CheckMethods(method string, host Host) int {
 			log.Println(err)
 		}
 	}
+
 	if resp == nil {
 		return 0
 	}
