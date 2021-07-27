@@ -29,10 +29,12 @@ GOAT target.txt
 
 ```
 
-Targets file should look either like this:
+Targets file could look either like this:
 ```
 target1.com:192.168.0.1
 target2.com:192.168.0.2
+target3.com::8443
+192.168.0.3::443
 ```
 or:
 ```
@@ -40,3 +42,4 @@ target1.com
 target2.com
 ```
 You can also mix and match both above formats, but anything else will cause issues.
+It deliberately delimits based on colons ":" and so essentially it will read the fields as follows domain:intendedip:443. Intended IP is really to safeguard against hitting out of scope web servers, in a scenario where you are for example performing an infrastructure test you could list a large number of servers with just the ip and port like so ip::port.
